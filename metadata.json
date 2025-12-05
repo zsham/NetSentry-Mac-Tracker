@@ -1,0 +1,7 @@
+{
+  "name": "NetSentry MAC Tracker",
+  "description": "A professional network asset tracking dashboard. Analyze MAC addresses using AI to identify manufacturers and visualize device locations within a facility via signal triangulation simulation.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
