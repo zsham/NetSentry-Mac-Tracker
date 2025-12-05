@@ -79,7 +79,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
         
         <div className="text-center mt-8 text-slate-600 text-xs">
-          &copy; 2024 NetSentry Security Systems. v2.1.0
+          &copy; 2025 NetSentry Security Systems. v2.1.0
         </div>
       </div>
     </div>
