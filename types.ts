@@ -24,7 +24,8 @@ export interface Device {
   type: string;
   status: DeviceStatus;
   zone: Zone;
-  lastSeen: string;
+  lastSeen: number; // Timestamp in ms
+  firstSeen: number; // Timestamp in ms
   signalStrength: number; // -100 to 0 dBm
   latitude: number;
   longitude: number;

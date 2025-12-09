@@ -11,93 +11,108 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Initial devices distributed globally to demonstrate world map
-  const [devices, setDevices] = useState<Device[]>([
-    {
-      id: '1',
-      macAddress: 'A4:C3:F0:89:12:34',
-      ipAddress: '192.168.1.105',
-      name: 'HQ Server Node',
-      manufacturer: 'Dell Inc.',
-      type: 'Server',
-      status: DeviceStatus.ONLINE,
-      zone: Zone.SERVER_ROOM,
-      lastSeen: 'Now',
-      signalStrength: -45,
-      latitude: 34.0522, // Los Angeles
-      longitude: -118.2437,
-      riskLevel: 'Low',
-      notes: 'Main backend infrastructure'
-    },
-    {
-      id: '2',
-      macAddress: '00:1B:44:11:3A:B7',
-      ipAddress: '10.0.5.20',
-      name: 'NYC Branch IoT',
-      manufacturer: 'Espressif Inc.',
-      type: 'Smart Sensor',
-      status: DeviceStatus.WARNING,
-      zone: Zone.LOBBY,
-      lastSeen: '5m ago',
-      signalStrength: -72,
-      latitude: 40.7128, // New York
-      longitude: -74.0060,
-      riskLevel: 'Medium',
-      notes: 'Unauthorized firmware version'
-    },
-    {
-      id: '3',
-      macAddress: 'BC:D1:12:88:99:00',
-      ipAddress: '172.16.0.45',
-      name: 'London Workstation',
-      manufacturer: 'Apple, Inc.',
-      type: 'MacBook Pro',
-      status: DeviceStatus.ONLINE,
-      zone: Zone.OFFICE_NORTH,
-      lastSeen: '1m ago',
-      signalStrength: -55,
-      latitude: 51.5074, // London
-      longitude: -0.1278,
-      riskLevel: 'Low',
-      notes: 'Remote developer asset'
-    },
-    {
-      id: '4',
-      macAddress: '11:22:33:44:55:66',
-      ipAddress: '192.168.50.10',
-      name: 'Tokyo Gateway',
-      manufacturer: 'Cisco Systems',
-      type: 'Router',
-      status: DeviceStatus.CRITICAL,
-      zone: Zone.WAREHOUSE,
-      lastSeen: '10s ago',
-      signalStrength: -30,
-      latitude: 35.6762, // Tokyo
-      longitude: 139.6503,
-      riskLevel: 'High',
-      notes: 'Unusual traffic patterns detected'
-    },
-    {
-      id: '5',
-      macAddress: 'AA:BB:CC:DD:EE:FF',
-      ipAddress: '10.5.1.99',
-      name: 'SG Logistics Pad',
-      manufacturer: 'Samsung',
-      type: 'Tablet',
-      status: DeviceStatus.ONLINE,
-      zone: Zone.WAREHOUSE,
-      lastSeen: 'Now',
-      signalStrength: -60,
-      latitude: 1.3521, // Singapore
-      longitude: 103.8198,
-      riskLevel: 'Low',
-      notes: 'Inventory management'
-    }
-  ]);
+  // Use a function to generate dates relative to "now" on mount
+  const getInitialDevices = (): Device[] => {
+    const now = Date.now();
+    return [
+      {
+        id: '1',
+        macAddress: 'A4:C3:F0:89:12:34',
+        ipAddress: '192.168.1.105',
+        name: 'HQ Server Node',
+        manufacturer: 'Dell Inc.',
+        type: 'Server',
+        status: DeviceStatus.ONLINE,
+        zone: Zone.SERVER_ROOM,
+        lastSeen: now,
+        firstSeen: now - 3600000 * 24 * 5, // 5 days ago
+        signalStrength: -45,
+        latitude: 34.0522, // Los Angeles
+        longitude: -118.2437,
+        riskLevel: 'Low',
+        notes: 'Main backend infrastructure'
+      },
+      {
+        id: '2',
+        macAddress: '00:1B:44:11:3A:B7',
+        ipAddress: '10.0.5.20',
+        name: 'NYC Branch IoT',
+        manufacturer: 'Espressif Inc.',
+        type: 'Smart Sensor',
+        status: DeviceStatus.WARNING,
+        zone: Zone.LOBBY,
+        lastSeen: now - 1000 * 60 * 5, // 5 minutes ago
+        firstSeen: now - 3600000 * 48, // 2 days ago
+        signalStrength: -72,
+        latitude: 40.7128, // New York
+        longitude: -74.0060,
+        riskLevel: 'Medium',
+        notes: 'Unauthorized firmware version'
+      },
+      {
+        id: '3',
+        macAddress: 'BC:D1:12:88:99:00',
+        ipAddress: '172.16.0.45',
+        name: 'London Workstation',
+        manufacturer: 'Apple, Inc.',
+        type: 'MacBook Pro',
+        status: DeviceStatus.ONLINE,
+        zone: Zone.OFFICE_NORTH,
+        lastSeen: now - 1000 * 60, // 1 minute ago
+        firstSeen: now - 3600000 * 3, // 3 hours ago
+        signalStrength: -55,
+        latitude: 51.5074, // London
+        longitude: -0.1278,
+        riskLevel: 'Low',
+        notes: 'Remote developer asset'
+      },
+      {
+        id: '4',
+        macAddress: '11:22:33:44:55:66',
+        ipAddress: '192.168.50.10',
+        name: 'Tokyo Gateway',
+        manufacturer: 'Cisco Systems',
+        type: 'Router',
+        status: DeviceStatus.CRITICAL,
+        zone: Zone.WAREHOUSE,
+        lastSeen: now - 1000 * 10, // 10s ago
+        firstSeen: now - 3600000 * 24 * 30, // 30 days ago
+        signalStrength: -30,
+        latitude: 35.6762, // Tokyo
+        longitude: 139.6503,
+        riskLevel: 'High',
+        notes: 'Unusual traffic patterns detected'
+      },
+      {
+        id: '5',
+        macAddress: 'AA:BB:CC:DD:EE:FF',
+        ipAddress: '10.5.1.99',
+        name: 'SG Logistics Pad',
+        manufacturer: 'Samsung',
+        type: 'Tablet',
+        status: DeviceStatus.ONLINE,
+        zone: Zone.WAREHOUSE,
+        lastSeen: now,
+        firstSeen: now - 3600000 * 1, // 1 hour ago
+        signalStrength: -60,
+        latitude: 1.3521, // Singapore
+        longitude: 103.8198,
+        riskLevel: 'Low',
+        notes: 'Inventory management'
+      }
+    ];
+  };
 
+  const [devices, setDevices] = useState<Device[]>([]);
   const [aiReport, setAiReport] = useState<string>('Generating security assessment...');
 
+  // Initialize devices on client side to avoid hydration mismatch with timestamps
   useEffect(() => {
-    if (!user) return; // Only run effects if logged in
+    setDevices(getInitialDevices());
+  }, []);
+
+  useEffect(() => {
+    if (!user || devices.length === 0) return; // Only run effects if logged in and initialized
 
     const fetchReport = async () => {
       const riskCount = devices.filter(d => d.riskLevel !== 'Low').length;
@@ -112,14 +127,16 @@ const App: React.FC = () => {
     // Initial fetch
     fetchReport();
     
-    // Simulate signal fluctuation and slight GPS drift
+    // Simulate signal fluctuation, slight GPS drift, and update timestamps
     const interval = setInterval(() => {
       setDevices(prev => prev.map(d => ({
         ...d,
         signalStrength: Math.max(-95, Math.min(-30, d.signalStrength + (Math.random() > 0.5 ? 2 : -2))),
         // Micro movement (approx 1-2 meters) to simulate live GPS jitter
         latitude: d.latitude + (Math.random() * 0.00002 - 0.00001),
-        longitude: d.longitude + (Math.random() * 0.00002 - 0.00001)
+        longitude: d.longitude + (Math.random() * 0.00002 - 0.00001),
+        // Update lastSeen for Online devices to "now"
+        lastSeen: d.status === DeviceStatus.ONLINE ? Date.now() : d.lastSeen
       })));
     }, 2000);
 

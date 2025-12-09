@@ -65,6 +65,13 @@ const TrackerMap: React.FC<TrackerMapProps> = ({ devices, onDeviceSelect }) => {
       }
     });
 
+    const formatDuration = (ms: number) => {
+      const hours = Math.floor(ms / 3600000);
+      const days = Math.floor(hours / 24);
+      if (days > 0) return `${days}d ${hours % 24}h`;
+      return `${hours}h ${(Math.floor(ms / 60000) % 60)}m`;
+    };
+
     // Add or Update markers
     devices.forEach(device => {
       // Determine colors based on status and risk
@@ -110,7 +117,10 @@ const TrackerMap: React.FC<TrackerMapProps> = ({ devices, onDeviceSelect }) => {
                     <span class="font-medium ${device.status === DeviceStatus.ONLINE ? 'text-emerald-600' : 'text-slate-600'}">${device.status}</span>
                 </div>
             </div>
-            <div class="mt-2 text-[10px] text-slate-400 truncate">${device.latitude.toFixed(4)}, ${device.longitude.toFixed(4)}</div>
+            <div class="mt-2 text-[10px] text-slate-500">
+                Active for: <span class="font-mono font-medium">${formatDuration(Date.now() - device.firstSeen)}</span>
+            </div>
+            <div class="mt-1 text-[10px] text-slate-400 truncate">${device.latitude.toFixed(4)}, ${device.longitude.toFixed(4)}</div>
         </div>
       `;
 
@@ -125,6 +135,8 @@ const TrackerMap: React.FC<TrackerMapProps> = ({ devices, onDeviceSelect }) => {
         }
         
         marker.setIcon(customIcon);
+        // Only update content if popup is not open to avoid flicker, or update robustly
+        // Leaflet's setContent works well even if open.
         marker.getPopup().setContent(popupContent);
       } else {
         // Create new marker
@@ -136,13 +148,6 @@ const TrackerMap: React.FC<TrackerMapProps> = ({ devices, onDeviceSelect }) => {
         markersRef.current[device.id] = marker;
       }
     });
-
-    // On initial load (or if you wanted to auto-fit), you could do:
-    // if (devices.length > 0 && !mapInstanceRef.current._hasFitBounds) {
-    //    const group = new L.featureGroup(Object.values(markersRef.current));
-    //    map.fitBounds(group.getBounds().pad(0.1));
-    //    mapInstanceRef.current._hasFitBounds = true;
-    // }
     
   }, [devices, onDeviceSelect]);
 

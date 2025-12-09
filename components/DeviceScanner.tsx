@@ -10,6 +10,7 @@ interface DeviceScannerProps {
 
 const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onUpdateDevice }) => {
   const [mode, setMode] = useState<'scan' | 'manual'>('scan');
+  const [now, setNow] = useState(Date.now());
   
   // Scanner State
   const [scanMac, setScanMac] = useState('');
@@ -30,6 +31,12 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
   });
 
   const [gettingLocation, setGettingLocation] = useState(false);
+
+  // Update "now" every minute to refresh relative times
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Reset form when switching modes
   useEffect(() => {
@@ -100,6 +107,7 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
   };
 
   const handleRegister = () => {
+    const timestamp = Date.now();
     const newDevice: Device = {
       id: Math.random().toString(36).substr(2, 9),
       macAddress: formData.mac || '00:00:00:00:00:00',
@@ -111,7 +119,8 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
       zone: formData.zone,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
-      lastSeen: 'Just now',
+      lastSeen: timestamp,
+      firstSeen: timestamp,
       signalStrength: -Math.floor(Math.random() * 40 + 30),
       riskLevel: formData.riskLevel,
       notes: formData.notes,
@@ -141,6 +150,29 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Helper formats
+  const formatDuration = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return `${seconds}s`;
+  };
+
+  const formatRelativeTime = (timestamp: number) => {
+    const diff = now - timestamp;
+    if (diff < 60000) return 'Just now';
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
@@ -404,6 +436,7 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
                         <tr>
                             <th className="px-6 py-4">Device Info</th>
                             <th className="px-6 py-4">Location</th>
+                            <th className="px-6 py-4">Activity</th>
                             <th className="px-6 py-4">Status</th>
                             <th className="px-6 py-4">Signal</th>
                             <th className="px-6 py-4">Risk</th>
@@ -425,6 +458,16 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
                                         </span>
                                         <span className="font-mono text-[10px] text-slate-500">
                                             {device.latitude.toFixed(4)}, {device.longitude.toFixed(4)}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-indigo-300 font-medium">
+                                            Active: {formatDuration(now - device.firstSeen)}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500">
+                                            Last seen: {formatRelativeTime(device.lastSeen)}
                                         </span>
                                     </div>
                                 </td>
@@ -458,7 +501,7 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
                         ))}
                         {devices.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                                     No devices tracked. Scan a MAC address to begin.
                                 </td>
                             </tr>
