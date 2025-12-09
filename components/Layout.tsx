@@ -77,6 +77,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, user,
                 </svg>
                 <span>Sign Out</span>
             </button>
+             <div className="mt-4 pt-4 border-t border-slate-800 text-center">
+                <p className="text-[10px] text-slate-600">Design by z@ShAm Malaysia Anonymous</p>
+             </div>
            </div>
         </div>
       </aside>

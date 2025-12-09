@@ -32,10 +32,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     
     if (authStep === 'input-email' && formData.email) {
       // SECURITY CHECK: Whitelist Validation
+      // Removed restriction to allow any user to register as requested
+      /*
       if (formData.email.toLowerCase() !== 'admin@netsentry.io') {
         setError('Access Denied: This system is restricted to administrators only.');
         return;
       }
+      */
       setAuthStep('input-name');
     } else if (authStep === 'input-name' && formData.name) {
       setAuthStep('loading');
@@ -226,6 +229,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         
         <div className="text-center mt-8 text-slate-600 text-xs">
           &copy; 2025 NetSentry Security Systems. v2.1.0
+          <p className="mt-2 text-slate-700 opacity-70">Design by z@ShAm Malaysia Anonymous</p>
         </div>
       </div>
     </div>
