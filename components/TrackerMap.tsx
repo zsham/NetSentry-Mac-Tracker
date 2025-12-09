@@ -1,157 +1,181 @@
-import React, { useMemo } from 'react';
-import { Device, Zone, DeviceStatus } from '../types';
+import React, { useEffect, useRef } from 'react';
+import { Device, DeviceStatus } from '../types';
+
+// Declare L for TypeScript since we are loading it from CDN in index.html
+declare const L: any;
 
 interface TrackerMapProps {
   devices: Device[];
   onDeviceSelect: (device: Device) => void;
 }
 
-// Define the geographical bounds of our "Facility"
-// This maps the Lat/Lng world to our 0-100% css container
-// Mock Location: Downtown LA Industrial District
-const FACILITY_BOUNDS = {
-  north: 34.0528, // Top (0% Y)
-  south: 34.0520, // Bottom (100% Y)
-  west: -118.2445, // Left (0% X)
-  east: -118.2430  // Right (100% X)
-};
-
 const TrackerMap: React.FC<TrackerMapProps> = ({ devices, onDeviceSelect }) => {
-  // A simplified floor plan grid system
-  const getZoneCoordinates = (zone: Zone) => {
-    switch (zone) {
-      case Zone.SERVER_ROOM: return { x: 15, y: 15, w: 20, h: 25, color: 'rgba(99, 102, 241, 0.1)' };
-      case Zone.OFFICE_NORTH: return { x: 40, y: 10, w: 55, h: 35, color: 'rgba(16, 185, 129, 0.1)' };
-      case Zone.OFFICE_SOUTH: return { x: 40, y: 50, w: 55, h: 35, color: 'rgba(16, 185, 129, 0.1)' };
-      case Zone.LOBBY: return { x: 5, y: 45, w: 30, h: 40, color: 'rgba(245, 158, 11, 0.1)' };
-      case Zone.WAREHOUSE: return { x: 5, y: 88, w: 90, h: 10, color: 'rgba(100, 116, 139, 0.1)' };
-      default: return { x: 0, y: 0, w: 100, h: 100, color: 'transparent' };
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<{ [key: string]: any }>({});
+
+  // Initialize Map
+  useEffect(() => {
+    if (mapContainerRef.current && !mapInstanceRef.current) {
+      // Create map centered on a neutral global view initially
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+        worldCopyJump: true
+      }).setView([20, 0], 2);
+
+      // Add Dark Matter tiles for that "Cyber Security" look
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Add Zoom Control at bottom right
+      L.control.zoom({
+        position: 'bottomright'
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
     }
-  };
 
-  const zones = Object.values(Zone).filter(z => z !== Zone.PARKING_LOT && z !== Zone.UNKNOWN);
+    // Cleanup function
+    return () => {
+       if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
-  // Helper to project lat/lng to % x/y
-  const getPosition = (lat: number, lng: number) => {
-    const latRange = FACILITY_BOUNDS.north - FACILITY_BOUNDS.south;
-    const lngRange = FACILITY_BOUNDS.east - FACILITY_BOUNDS.west;
+  // Update Markers
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
 
-    // Calculate percentage (0-100)
-    // Longitude increases West to East
-    let x = ((lng - FACILITY_BOUNDS.west) / lngRange) * 100;
+    const map = mapInstanceRef.current;
     
-    // Latitude increases South to North (but Y goes down on screen)
-    // So if lat is max (North), Y should be 0.
-    let y = ((FACILITY_BOUNDS.north - lat) / latRange) * 100;
+    // Track current device IDs to identify removals
+    const currentIds = new Set(devices.map(d => d.id));
 
-    // Clamp values to keep inside map visually even if slightly out of bounds
-    x = Math.max(0, Math.min(100, x));
-    y = Math.max(0, Math.min(100, y));
+    // Remove markers for devices that no longer exist
+    Object.keys(markersRef.current).forEach(id => {
+      if (!currentIds.has(id)) {
+        map.removeLayer(markersRef.current[id]);
+        delete markersRef.current[id];
+      }
+    });
 
-    return { x, y };
-  };
+    // Add or Update markers
+    devices.forEach(device => {
+      // Determine colors based on status and risk
+      const isCritical = device.status === DeviceStatus.CRITICAL || device.riskLevel === 'High';
+      const isWarning = device.status === DeviceStatus.WARNING || device.riskLevel === 'Medium';
+      
+      const colorClass = isCritical ? 'bg-rose-500 shadow-rose-500/50' : 
+                         isWarning ? 'bg-amber-500 shadow-amber-500/50' : 
+                         'bg-emerald-500 shadow-emerald-500/50';
+
+      const pulseClass = device.status === DeviceStatus.ONLINE ? 'animate-ping' : '';
+
+      // Create a custom HTML icon using Tailwind classes
+      const iconHtml = `
+        <div class="relative w-4 h-4 group">
+          <span class="absolute inline-flex h-full w-full rounded-full opacity-75 ${pulseClass} ${colorClass.split(' ')[0]}"></span>
+          <div class="relative flex items-center justify-center w-4 h-4 rounded-full shadow-lg ${colorClass}"></div>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        className: 'custom-marker-wrapper', // Empty class to avoid default styles
+        html: iconHtml,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+        popupAnchor: [0, -10]
+      });
+
+      const popupContent = `
+        <div class="min-w-[160px]">
+            <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-sm text-slate-900">${device.name}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full ${isCritical ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}">${device.riskLevel}</span>
+            </div>
+            <div class="text-xs text-slate-500 font-mono mb-2">${device.macAddress}</div>
+            <div class="grid grid-cols-2 gap-2 text-xs border-t pt-2 border-slate-200">
+                <div>
+                    <span class="block text-slate-400 text-[10px] uppercase">Zone</span>
+                    <span class="font-medium text-slate-700">${device.zone}</span>
+                </div>
+                <div>
+                    <span class="block text-slate-400 text-[10px] uppercase">Status</span>
+                    <span class="font-medium ${device.status === DeviceStatus.ONLINE ? 'text-emerald-600' : 'text-slate-600'}">${device.status}</span>
+                </div>
+            </div>
+            <div class="mt-2 text-[10px] text-slate-400 truncate">${device.latitude.toFixed(4)}, ${device.longitude.toFixed(4)}</div>
+        </div>
+      `;
+
+      if (markersRef.current[device.id]) {
+        // Update existing marker
+        const marker = markersRef.current[device.id];
+        const currentLatLng = marker.getLatLng();
+        
+        // Only update if moved to avoid jitter
+        if (currentLatLng.lat !== device.latitude || currentLatLng.lng !== device.longitude) {
+            marker.setLatLng([device.latitude, device.longitude]);
+        }
+        
+        marker.setIcon(customIcon);
+        marker.getPopup().setContent(popupContent);
+      } else {
+        // Create new marker
+        const marker = L.marker([device.latitude, device.longitude], { icon: customIcon })
+          .addTo(map)
+          .bindPopup(popupContent)
+          .on('click', () => onDeviceSelect(device));
+        
+        markersRef.current[device.id] = marker;
+      }
+    });
+
+    // On initial load (or if you wanted to auto-fit), you could do:
+    // if (devices.length > 0 && !mapInstanceRef.current._hasFitBounds) {
+    //    const group = new L.featureGroup(Object.values(markersRef.current));
+    //    map.fitBounds(group.getBounds().pad(0.1));
+    //    mapInstanceRef.current._hasFitBounds = true;
+    // }
+    
+  }, [devices, onDeviceSelect]);
+
 
   return (
     <div className="w-full h-full p-6 flex flex-col">
-      <div className="mb-4 flex justify-between items-end">
+       <div className="mb-4 flex justify-between items-end">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Live Geo-Spatial Map</h2>
+          <h2 className="text-2xl font-bold text-white mb-1">Global Threat Map</h2>
           <p className="text-slate-400 text-sm">
-            Facility Bounds: {FACILITY_BOUNDS.north.toFixed(4)}N, {FACILITY_BOUNDS.west.toFixed(4)}W
+            Real-time geospatial tracking of all connected assets.
           </p>
         </div>
         <div className="flex space-x-4 text-xs text-slate-400">
           <div className="flex items-center"><span className="w-3 h-3 bg-indigo-500 rounded-full mr-2"></span>Server</div>
-          <div className="flex items-center"><span className="w-3 h-3 bg-emerald-500 rounded-full mr-2"></span>Office</div>
-          <div className="flex items-center"><span className="w-3 h-3 bg-amber-500 rounded-full mr-2"></span>Public</div>
+          <div className="flex items-center"><span className="w-3 h-3 bg-emerald-500 rounded-full mr-2"></span>Safe</div>
+          <div className="flex items-center"><span className="w-3 h-3 bg-rose-500 rounded-full mr-2"></span>Critical</div>
         </div>
       </div>
-
-      <div className="flex-1 bg-slate-950 rounded-xl border border-slate-800 relative overflow-hidden shadow-2xl shadow-black/50">
-        {/* Grid Background */}
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `radial-gradient(#475569 1px, transparent 1px)`,
-            backgroundSize: '20px 20px'
-          }}
-        ></div>
-
-        {/* Zones */}
-        {zones.map((zone) => {
-          const dims = getZoneCoordinates(zone);
-          return (
-            <div
-              key={zone}
-              className="absolute border border-slate-700/50 flex items-center justify-center pointer-events-none"
-              style={{
-                left: `${dims.x}%`,
-                top: `${dims.y}%`,
-                width: `${dims.w}%`,
-                height: `${dims.h}%`,
-                backgroundColor: dims.color,
-              }}
-            >
-              <span className="text-slate-600 font-bold uppercase text-xs tracking-widest">{zone}</span>
-            </div>
-          );
-        })}
-
-        {/* Devices */}
-        {devices.map((device) => {
-          const pos = getPosition(device.latitude, device.longitude);
-          return (
-            <div
-              key={device.id}
-              onClick={() => onDeviceSelect(device)}
-              className="absolute group cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 ease-out hover:scale-125 hover:z-50"
-              style={{
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
-              }}
-            >
-              {/* Ping Animation */}
-              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${
-                device.status === DeviceStatus.CRITICAL ? 'bg-rose-500' : 'bg-emerald-500'
-              }`}></span>
-              
-              {/* Device Dot */}
-              <div className={`relative flex items-center justify-center w-4 h-4 rounded-full shadow-lg ${
-                 device.status === DeviceStatus.CRITICAL ? 'bg-rose-500 shadow-rose-500/50' : 
-                 device.status === DeviceStatus.WARNING ? 'bg-amber-500 shadow-amber-500/50' :
-                 'bg-emerald-500 shadow-emerald-500/50'
-              }`}>
-                 {device.riskLevel === 'High' && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full border border-slate-900"></span>}
-              </div>
-
-              {/* Tooltip */}
-              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-56 bg-slate-800 text-xs rounded shadow-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none border border-slate-700">
-                <div className="font-bold text-white mb-1">{device.name}</div>
-                <div className="text-slate-400 font-mono text-[10px] mb-1">{device.macAddress}</div>
-                <div className="text-indigo-400 font-mono text-[9px] mb-2">
-                    {device.latitude.toFixed(6)}, {device.longitude.toFixed(6)}
-                </div>
-                <div className="flex justify-between border-t border-slate-700 pt-1">
-                  <span className={device.status === DeviceStatus.ONLINE ? 'text-emerald-400' : 'text-slate-500'}>{device.status}</span>
-                  <span className="text-slate-500">{device.signalStrength}dBm</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Scanner Effect Overlay */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent animate-[scan_4s_ease-in-out_infinite] shadow-[0_0_15px_rgba(16,185,129,0.2)]"></div>
+      
+      <div className="flex-1 bg-slate-950 rounded-xl border border-slate-800 relative overflow-hidden shadow-2xl shadow-black/50 z-0">
+        <div ref={mapContainerRef} className="w-full h-full z-0" />
+        
+        {/* Overlay for map attribution styling if needed, or status overlays */}
+        <div className="absolute top-4 left-4 z-[400] bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-lg shadow-lg">
+             <div className="flex items-center space-x-2 text-xs text-emerald-400">
+                 <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="font-mono">LIVE FEED ACTIVE</span>
+             </div>
         </div>
-        <style>{`
-          @keyframes scan {
-            0% { top: 0%; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
-          }
-        `}</style>
       </div>
     </div>
   );

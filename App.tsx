@@ -9,38 +9,88 @@ import { generateSecurityReport } from './services/geminiService';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Initial devices distributed globally to demonstrate world map
   const [devices, setDevices] = useState<Device[]>([
     {
       id: '1',
       macAddress: 'A4:C3:F0:89:12:34',
       ipAddress: '192.168.1.105',
-      name: 'Executive Laptop',
-      manufacturer: 'Apple, Inc.',
-      type: 'MacBook Pro',
+      name: 'HQ Server Node',
+      manufacturer: 'Dell Inc.',
+      type: 'Server',
       status: DeviceStatus.ONLINE,
-      zone: Zone.OFFICE_NORTH,
+      zone: Zone.SERVER_ROOM,
       lastSeen: 'Now',
       signalStrength: -45,
-      latitude: 34.0526,
-      longitude: -118.2435,
+      latitude: 34.0522, // Los Angeles
+      longitude: -118.2437,
       riskLevel: 'Low',
-      notes: 'Corporate asset'
+      notes: 'Main backend infrastructure'
     },
     {
       id: '2',
       macAddress: '00:1B:44:11:3A:B7',
-      ipAddress: '192.168.1.200',
-      name: 'Unknown IoT',
+      ipAddress: '10.0.5.20',
+      name: 'NYC Branch IoT',
       manufacturer: 'Espressif Inc.',
-      type: 'Smart Plug / Sensor',
+      type: 'Smart Sensor',
       status: DeviceStatus.WARNING,
       zone: Zone.LOBBY,
       lastSeen: '5m ago',
       signalStrength: -72,
-      latitude: 34.0522,
-      longitude: -118.2443,
+      latitude: 40.7128, // New York
+      longitude: -74.0060,
       riskLevel: 'Medium',
-      notes: 'Unauthorized device detected'
+      notes: 'Unauthorized firmware version'
+    },
+    {
+      id: '3',
+      macAddress: 'BC:D1:12:88:99:00',
+      ipAddress: '172.16.0.45',
+      name: 'London Workstation',
+      manufacturer: 'Apple, Inc.',
+      type: 'MacBook Pro',
+      status: DeviceStatus.ONLINE,
+      zone: Zone.OFFICE_NORTH,
+      lastSeen: '1m ago',
+      signalStrength: -55,
+      latitude: 51.5074, // London
+      longitude: -0.1278,
+      riskLevel: 'Low',
+      notes: 'Remote developer asset'
+    },
+    {
+      id: '4',
+      macAddress: '11:22:33:44:55:66',
+      ipAddress: '192.168.50.10',
+      name: 'Tokyo Gateway',
+      manufacturer: 'Cisco Systems',
+      type: 'Router',
+      status: DeviceStatus.CRITICAL,
+      zone: Zone.WAREHOUSE,
+      lastSeen: '10s ago',
+      signalStrength: -30,
+      latitude: 35.6762, // Tokyo
+      longitude: 139.6503,
+      riskLevel: 'High',
+      notes: 'Unusual traffic patterns detected'
+    },
+    {
+      id: '5',
+      macAddress: 'AA:BB:CC:DD:EE:FF',
+      ipAddress: '10.5.1.99',
+      name: 'SG Logistics Pad',
+      manufacturer: 'Samsung',
+      type: 'Tablet',
+      status: DeviceStatus.ONLINE,
+      zone: Zone.WAREHOUSE,
+      lastSeen: 'Now',
+      signalStrength: -60,
+      latitude: 1.3521, // Singapore
+      longitude: 103.8198,
+      riskLevel: 'Low',
+      notes: 'Inventory management'
     }
   ]);
 
@@ -62,12 +112,12 @@ const App: React.FC = () => {
     // Initial fetch
     fetchReport();
     
-    // Simulate signal fluctuation and movement
+    // Simulate signal fluctuation and slight GPS drift
     const interval = setInterval(() => {
       setDevices(prev => prev.map(d => ({
         ...d,
         signalStrength: Math.max(-95, Math.min(-30, d.signalStrength + (Math.random() > 0.5 ? 2 : -2))),
-        // Slight GPS drift (approx 1-2 meters)
+        // Micro movement (approx 1-2 meters) to simulate live GPS jitter
         latitude: d.latitude + (Math.random() * 0.00002 - 0.00001),
         longitude: d.longitude + (Math.random() * 0.00002 - 0.00001)
       })));
@@ -135,8 +185,8 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-sm">
-                    <div className="text-slate-400 text-sm font-medium mb-2">Network Load</div>
-                    <div className="text-4xl font-bold text-white">12<span className="text-lg text-slate-500 font-normal">Mbps</span></div>
+                    <div className="text-slate-400 text-sm font-medium mb-2">Global Nodes</div>
+                    <div className="text-4xl font-bold text-white">5<span className="text-lg text-slate-500 font-normal"> / 5 Zones</span></div>
                      <div className="mt-2 text-xs text-indigo-400 flex items-center">
                         <span className="w-2 h-2 bg-indigo-500 rounded-full mr-1"></span>
                         Optimal
@@ -174,7 +224,7 @@ const App: React.FC = () => {
                             <div className="mt-1 min-w-[8px] h-2 bg-emerald-500 rounded-full mr-3"></div>
                             <div>
                                 <div className="text-sm font-medium text-white">System Start</div>
-                                <div className="text-xs text-slate-400 mt-1">NetSentry initialized successfully.</div>
+                                <div className="text-xs text-slate-400 mt-1">NetSentry initialized successfully. Global monitoring active.</div>
                             </div>
                         </div>
                     </div>
