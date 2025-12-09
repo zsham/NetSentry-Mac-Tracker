@@ -24,8 +24,12 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
     manufacturer: '',
     zone: Zone.LOBBY,
     riskLevel: 'Low' as 'Low' | 'Medium' | 'High',
-    notes: ''
+    notes: '',
+    latitude: '34.0524',
+    longitude: '-118.2437'
   });
+
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   // Reset form when switching modes
   useEffect(() => {
@@ -37,7 +41,9 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
         manufacturer: 'Unknown',
         zone: Zone.LOBBY,
         riskLevel: 'Low',
-        notes: ''
+        notes: '',
+        latitude: '34.0524',
+        longitude: '-118.2437'
       });
       setAnalysisResult(null);
       setScanMac('');
@@ -59,7 +65,9 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
         manufacturer: result.manufacturer,
         zone: Zone.UNKNOWN, // Let system triangulation determine or user set
         riskLevel: result.securityRisk.includes('High') ? 'High' : result.securityRisk.includes('Medium') ? 'Medium' : 'Low',
-        notes: result.likelyUsage
+        notes: result.likelyUsage,
+        latitude: (34.0524 + (Math.random() * 0.0004 - 0.0002)).toFixed(6), // Randomize slightly for scan
+        longitude: (-118.2437 + (Math.random() * 0.0004 - 0.0002)).toFixed(6)
       });
     } catch (e) {
       console.error(e);
@@ -68,12 +76,30 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
     }
   };
 
-  const handleRegister = () => {
-    // Simulate location/coordinates based on a random "likely" zone for demo purposes
-    // In a real app, this would be determined by signal triangulation
-    const randomX = Math.floor(Math.random() * 80) + 10;
-    const randomY = Math.floor(Math.random() * 80) + 10;
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData(prev => ({
+          ...prev,
+          latitude: position.coords.latitude.toFixed(6),
+          longitude: position.coords.longitude.toFixed(6)
+        }));
+        setGettingLocation(false);
+      },
+      (error) => {
+        console.error("Error getting location", error);
+        alert("Unable to retrieve location. Please allow permissions.");
+        setGettingLocation(false);
+      }
+    );
+  };
 
+  const handleRegister = () => {
     const newDevice: Device = {
       id: Math.random().toString(36).substr(2, 9),
       macAddress: formData.mac || '00:00:00:00:00:00',
@@ -83,7 +109,8 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
       type: formData.type,
       status: DeviceStatus.ONLINE,
       zone: formData.zone,
-      coordinates: { x: randomX, y: randomY },
+      latitude: parseFloat(formData.latitude),
+      longitude: parseFloat(formData.longitude),
       lastSeen: 'Just now',
       signalStrength: -Math.floor(Math.random() * 40 + 30),
       riskLevel: formData.riskLevel,
@@ -105,7 +132,9 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
             manufacturer: 'Unknown',
             zone: Zone.LOBBY,
             riskLevel: 'Low',
-            notes: ''
+            notes: '',
+            latitude: '34.0524',
+            longitude: '-118.2437'
         });
     }
   };
@@ -284,6 +313,53 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
                                 </select>
                             </div>
                         </div>
+                        
+                        {/* Location Inputs */}
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-sm font-medium text-slate-400">Location (GPS)</label>
+                                <button 
+                                    onClick={handleGetLocation}
+                                    disabled={gettingLocation}
+                                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center"
+                                >
+                                    {gettingLocation ? (
+                                        <span className="animate-pulse">Locating...</span>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Get Current Location
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <input 
+                                        type="number"
+                                        step="0.000001"
+                                        placeholder="Lat"
+                                        value={formData.latitude}
+                                        onChange={(e) => handleInputChange('latitude', e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                                    />
+                                </div>
+                                <div>
+                                    <input 
+                                        type="number"
+                                        step="0.000001"
+                                        placeholder="Long"
+                                        value={formData.longitude}
+                                        onChange={(e) => handleInputChange('longitude', e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-slate-400 mb-1">Risk Level</label>
                             <div className="flex gap-4 mt-2">
@@ -327,7 +403,7 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
                     <thead className="bg-slate-900 text-slate-400 text-xs uppercase font-semibold">
                         <tr>
                             <th className="px-6 py-4">Device Info</th>
-                            <th className="px-6 py-4">Zone / Location</th>
+                            <th className="px-6 py-4">Location</th>
                             <th className="px-6 py-4">Status</th>
                             <th className="px-6 py-4">Signal</th>
                             <th className="px-6 py-4">Risk</th>
@@ -343,9 +419,14 @@ const DeviceScanner: React.FC<DeviceScannerProps> = ({ devices, onAddDevice, onU
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300">
-                                        {device.zone}
-                                    </span>
+                                    <div className="flex flex-col">
+                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300 w-fit mb-1">
+                                            {device.zone}
+                                        </span>
+                                        <span className="font-mono text-[10px] text-slate-500">
+                                            {device.latitude.toFixed(4)}, {device.longitude.toFixed(4)}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center">

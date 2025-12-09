@@ -21,7 +21,8 @@ const App: React.FC = () => {
       zone: Zone.OFFICE_NORTH,
       lastSeen: 'Now',
       signalStrength: -45,
-      coordinates: { x: 55, y: 25 },
+      latitude: 34.0526,
+      longitude: -118.2435,
       riskLevel: 'Low',
       notes: 'Corporate asset'
     },
@@ -36,7 +37,8 @@ const App: React.FC = () => {
       zone: Zone.LOBBY,
       lastSeen: '5m ago',
       signalStrength: -72,
-      coordinates: { x: 15, y: 65 },
+      latitude: 34.0522,
+      longitude: -118.2443,
       riskLevel: 'Medium',
       notes: 'Unauthorized device detected'
     }
@@ -65,11 +67,9 @@ const App: React.FC = () => {
       setDevices(prev => prev.map(d => ({
         ...d,
         signalStrength: Math.max(-95, Math.min(-30, d.signalStrength + (Math.random() > 0.5 ? 2 : -2))),
-        // Slight coordinate jitter to simulate GPS drift/movement
-        coordinates: {
-            x: Math.max(5, Math.min(95, d.coordinates.x + (Math.random() - 0.5))),
-            y: Math.max(5, Math.min(95, d.coordinates.y + (Math.random() - 0.5)))
-        }
+        // Slight GPS drift (approx 1-2 meters)
+        latitude: d.latitude + (Math.random() * 0.00002 - 0.00001),
+        longitude: d.longitude + (Math.random() * 0.00002 - 0.00001)
       })));
     }, 2000);
 

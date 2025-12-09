@@ -26,7 +26,8 @@ export interface Device {
   zone: Zone;
   lastSeen: string;
   signalStrength: number; // -100 to 0 dBm
-  coordinates: { x: number; y: number }; // Percentage 0-100
+  latitude: number;
+  longitude: number;
   riskLevel: 'Low' | 'Medium' | 'High';
   notes: string;
 }
